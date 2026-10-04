@@ -1,1 +1,1072 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AntLab — Psychology Simulator</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;background:#05070a;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#cfe0f0;}
+  #stage{position:fixed;inset:0;}
+  canvas{display:block;width:100%;height:100%;touch-action:none;}
+
+  /* ===== TOP HUD ===== */
+  #hud{
+    position:fixed;top:0;left:0;right:0;height:46px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 12px;z-index:20;
+    background:linear-gradient(180deg,rgba(4,8,14,.92),rgba(4,8,14,0));
+    pointer-events:none;
+  }
+  .hud-group{display:flex;gap:8px;align-items:center;pointer-events:auto;}
+  .chip{
+    background:rgba(255,255,255,.06);border:1px solid rgba(120,180,255,.22);
+    border-radius:9px;padding:6px 10px;font-size:12px;font-weight:600;
+    color:#a8cdf0;letter-spacing:.3px;backdrop-filter:blur(6px);white-space:nowrap;
+  }
+  .chip b{color:#6fd8ff;}
+  .btn-mini{
+    background:rgba(255,255,255,.06);border:1px solid rgba(120,180,255,.22);
+    border-radius:9px;width:36px;height:32px;font-size:15px;color:#cfe0f0;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .btn-mini:active{background:rgba(120,180,255,.25);}
+
+  /* ===== TOOL BAR ===== */
+  #tools{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:76px;z-index:22;
+    display:flex;gap:7px;padding:7px;border-radius:16px;
+    background:rgba(8,14,22,.82);border:1px solid rgba(120,180,255,.18);
+    backdrop-filter:blur(12px);max-width:calc(100vw - 20px);overflow-x:auto;
+  }
+  .tool{
+    background:rgba(255,255,255,.04);border:1px solid rgba(120,180,255,.16);
+    border-radius:12px;min-width:50px;height:52px;font-size:20px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:1px;cursor:pointer;transition:.18s;flex-shrink:0;
+  }
+  .tool span{font-size:8px;letter-spacing:.4px;color:#7fa6cc;text-transform:uppercase;font-weight:700;}
+  .tool.on{background:rgba(90,180,255,.22);border-color:#6fd8ff;box-shadow:0 0 16px rgba(90,180,255,.4);}
+
+  /* ===== BOTTOM TABS ===== */
+  #tabs{
+    position:fixed;bottom:0;left:0;right:0;height:64px;z-index:25;
+    display:flex;background:rgba(6,10,16,.95);border-top:1px solid rgba(120,180,255,.15);
+    backdrop-filter:blur(14px);
+  }
+  .tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:#5d7d9c;
+    font-weight:700;cursor:pointer;
+  }
+  .tab .ic{font-size:19px;}
+  .tab.on{color:#6fd8ff;}
+
+  /* ===== SHEETS ===== */
+  .sheet{
+    position:fixed;left:0;right:0;bottom:64px;z-index:24;
+    background:rgba(7,12,19,.97);border-top:1px solid rgba(120,180,255,.2);
+    border-radius:20px 20px 0 0;backdrop-filter:blur(18px);
+    transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1);
+    max-height:62vh;overflow-y:auto;padding:16px 16px 22px;
+    box-shadow:0 -14px 40px rgba(0,0,0,.6);
+  }
+  .sheet.open{transform:translateY(0);}
+  .sheet h3{
+    font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#4f739a;
+    margin:14px 0 8px;font-weight:800;
+  }
+  .sheet h3:first-child{margin-top:0;}
+  .row{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:10px;margin-bottom:11px;
+  }
+  .row label{font-size:12px;color:#9db8d4;flex:1;min-width:0;}
+  .row .val{font-size:11px;color:#6fd8ff;font-weight:700;min-width:38px;text-align:right;font-variant-numeric:tabular-nums;}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;height:4px;border-radius:4px;
+    background:rgba(120,180,255,.2);width:100%;flex:1.4;outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:#6fd8ff;box-shadow:0 0 10px rgba(110,216,255,.7);cursor:pointer;
+  }
+  .sw{
+    width:46px;height:26px;border-radius:13px;background:rgba(120,180,255,.2);
+    position:relative;transition:.22s;flex-shrink:0;cursor:pointer;border:none;
+  }
+  .sw::after{
+    content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+    background:#4d6d8c;transition:.22s;
+  }
+  .sw.on{background:rgba(110,216,255,.45);}
+  .sw.on::after{left:23px;background:#6fd8ff;box-shadow:0 0 12px rgba(110,216,255,.8);}
+
+  .abtn{
+    width:100%;padding:12px;border-radius:12px;border:1px solid rgba(120,180,255,.28);
+    background:rgba(120,180,255,.1);color:#bfe0ff;font-size:13px;font-weight:700;
+    cursor:pointer;margin-bottom:8px;letter-spacing:.4px;
+  }
+  .abtn:active{background:rgba(120,180,255,.24);}
+  .abtn.danger{border-color:rgba(255,90,90,.35);background:rgba(255,90,90,.1);color:#ffb0b0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  /* ===== INSPECTOR ===== */
+  .bar-wrap{margin-bottom:9px;}
+  .bar-top{display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:4px;color:#8fadca;}
+  .bar-top b{color:#cfe0f0;font-variant-numeric:tabular-nums;}
+  .bar{height:7px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .bar i{display:block;height:100%;border-radius:4px;transition:width .25s;}
+  .persona{display:inline-block;font-size:10px;padding:3px 9px;border-radius:20px;
+    border:1px solid rgba(120,180,255,.3);color:#8fd6ff;font-weight:700;letter-spacing:.5px;}
+
+  #log{
+    font-size:10.5px;line-height:1.7;color:#7f9dba;font-family:ui-monospace,Menlo,monospace;
+    max-height:180px;overflow-y:auto;
+  }
+  #log div{border-bottom:1px solid rgba(120,180,255,.07);padding:2px 0;}
+  #log .hi{color:#6fd8ff;}
+  #log .warn{color:#ffb36b;}
+  #log .bad{color:#ff8a8a;}
+
+  #toast{
+    position:fixed;top:54px;left:50%;transform:translate(-50%,-14px);z-index:30;
+    background:rgba(10,20,32,.95);border:1px solid rgba(120,180,255,.35);
+    color:#bfe0ff;padding:9px 16px;border-radius:11px;font-size:12px;font-weight:600;
+    opacity:0;transition:.3s;pointer-events:none;backdrop-filter:blur(10px);
+    max-width:90vw;text-align:center;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+  .hint-txt{font-size:10.5px;color:#5d7d9c;line-height:1.6;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+
+<div id="hud">
+  <div class="hud-group">
+    <div class="chip">🐜 <b id="hPop">10</b></div>
+    <div class="chip">⏱ <b id="hGen">0</b></div>
+  </div>
+  <div class="hud-group">
+    <button class="btn-mini" id="bPlay">⏸</button>
+    <button class="btn-mini" id="bSpeed">1×</button>
+  </div>
+</div>
+
+<div id="tools">
+  <button class="tool on" data-tool="poke">👆<span>Poke</span></button>
+  <button class="tool" data-tool="food">🍖<span>Food</span></button>
+  <button class="tool" data-tool="danger">⚠️<span>Threat</span></button>
+  <button class="tool" data-tool="pet">🤚<span>Reward</span></button>
+  <button class="tool" data-tool="wall">🧱<span>Wall</span></button>
+  <button class="tool" data-tool="spawn">🐜<span>Ant+</span></button>
+</div>
+
+<div id="tabs">
+  <div class="tab on" data-sheet="ctrl"><span class="ic">🎛️</span>Control</div>
+  <div class="tab" data-sheet="mind"><span class="ic">🧠</span>Mind</div>
+  <div class="tab" data-sheet="data"><span class="ic">📊</span>Data</div>
+  <div class="tab" data-sheet="sys"><span class="ic">⚙️</span>System</div>
+</div>
+
+<div class="sheet" id="sheet-ctrl">
+  <h3>Global Drives</h3>
+  <div class="row"><label>Hunger pull</label><input type="range" id="pHunger" min="0" max="200" value="100"><span class="val" id="vHunger">1.0</span></div>
+  <div class="row"><label>Curiosity</label><input type="range" id="pCurio" min="0" max="200" value="100"><span class="val" id="vCurio">1.0</span></div>
+  <div class="row"><label>Fear response</label><input type="range" id="pFear" min="0" max="200" value="100"><span class="val" id="vFear">1.0</span></div>
+  <div class="row"><label>Social pull</label><input type="range" id="pSocial" min="0" max="200" value="100"><span class="val" id="vSocial">1.0</span></div>
+  <h3>Learning Engine</h3>
+  <div class="row"><label>Learning rate</label><input type="range" id="pLR" min="0" max="100" value="30"><span class="val" id="vLR">0.30</span></div>
+  <div class="row"><label>Memory decay</label><input type="range" id="pDecay" min="0" max="100" value="15"><span class="val" id="vDecay">0.15</span></div>
+  <div class="row"><label>Punishment impact</label><input type="range" id="pPun" min="0" max="200" value="100"><span class="val" id="vPun">1.0</span></div>
+  <div class="row"><label>Reward strength</label><input type="range" id="pRew" min="0" max="200" value="100"><span class="val" id="vRew">1.0</span></div>
+  <h3>Colony</h3>
+  <div class="row"><label>Ant count</label><input type="range" id="pCount" min="1" max="40" value="10"><span class="val" id="vCount">10</span></div>
+  <div class="row"><label>Personality spread</label><input type="range" id="pVar" min="0" max="100" value="50"><span class="val" id="vVar">0.50</span></div>
+  <div class="row"><label>Mutation on spawn</label><input type="range" id="pMut" min="0" max="100" value="20"><span class="val" id="vMut">0.20</span></div>
+</div>
+
+<div class="sheet" id="sheet-mind">
+  <h3>Selected Ant</h3>
+  <div id="inspector"><p class="hint-txt">Tap an ant in the arena to inspect its live mind.</p></div>
+  <h3>Personality Presets</h3>
+  <div class="grid2">
+    <button class="abtn" data-persona="bold">🔥 Bold</button>
+    <button class="abtn" data-persona="timid">🛡️ Timid</button>
+    <button class="abtn" data-persona="greedy">💰 Greedy</button>
+    <button class="abtn" data-persona="curious">🔍 Curious</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet-data">
+  <h3>Learning Curve</h3>
+  <canvas id="graph" height="150" style="width:100%;height:150px;background:rgba(255,255,255,.03);border-radius:10px;"></canvas>
+  <h3>Colony Averages</h3>
+  <div id="avgBox"></div>
+  <h3>Event Log</h3>
+  <div id="log"></div>
+</div>
+
+<div class="sheet" id="sheet-sys">
+  <h3>World</h3>
+  <div class="grid2">
+    <button class="abtn" id="bReset">♻️ Reset World</button>
+    <button class="abtn" id="bClear">🧹 Clear Items</button>
+    <button class="abtn" id="bSave">💾 Save World</button>
+    <button class="abtn" id="bLoad">📂 Load World</button>
+  </div>
+  <h3>Debug Views</h3>
+  <div class="row"><label>Show decision rays</label><button class="sw" id="swRays"></button></div>
+  <div class="row"><label>Show personality colors</label><button class="sw on" id="swColor"></button></div>
+  <div class="row"><label>Show learning links</label><button class="sw" id="swLinks"></button></div>
+  <h3>Danger Zone</h3>
+  <button class="abtn danger" id="bNuke">💥 Reset All Ants' Memories</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   ANTLAB — utility-driven ant psychology simulator
+   No if/else behavior trees. Ants score actions by drives.
+   ========================================================= */
+
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W, H, DPR;
+function resize(){
+  // PERF FIX: 2x DPR on a fullscreen mobile canvas is very expensive.
+  const mobile = Math.min(innerWidth, innerHeight) < 820;
+  DPR = Math.min(devicePixelRatio||1, mobile ? 1.5 : 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener('resize', resize); resize();
+
+/* ============ CONFIG (live-tweakable) ============ */
+const CFG = {
+  hunger:1, curiosity:1, fear:1, social:1,
+  lr:0.30, decay:0.15, punish:1, reward:1,
+  count:10, variance:0.5, mutation:0.2,
+  showRays:false, showColor:true, showLinks:false
+};
+
+const rand  = (a,b)=>a+Math.random()*(b-a);
+const clamp = (v,a,b)=>v<a?a:v>b?b:v;
+const dist  = (a,b)=>Math.hypot(a.x-b.x, a.y-b.y);
+
+/* ============ PERSONALITY ============ */
+const PERSONAS = {
+  bold:    {curiosity:1.7, fear:0.4, social:1.1, hunger:1.2, speed:1.25},
+  timid:   {curiosity:0.6, fear:1.9, social:1.3, hunger:0.9, speed:0.85},
+  greedy:  {curiosity:0.9, fear:0.8, social:0.6, hunger:2.0, speed:1.05},
+  curious: {curiosity:2.0, fear:0.9, social:1.4, hunger:0.9, speed:1.15},
+  normal:  {curiosity:1.0, fear:1.0, social:1.0, hunger:1.0, speed:1.0}
+};
+const PERSONA_KEYS = Object.keys(PERSONAS);
+
+/* ============ WORLD ============ */
+let ants = [], foods = [], dangers = [], walls = [], links = [];
+let selected = null, paused = false, speed = 1, gen = 0;
+let history = [];   // learning curve (avg reward over time)
+let logLines = [];
+
+const TAU = Math.PI*2;
+
+function log(msg, cls=''){
+  logLines.unshift({m:msg, c:cls, t:Date.now()});
+  if(logLines.length > 60) logLines.pop();
+  renderLog();
+}
+
+/* ============ ANT ============ */
+class Ant {
+  constructor(x,y, persona='normal', inherit=null){
+    this.x = x; this.y = y;
+    this.vx = rand(-1,1); this.vy = rand(-1,1);
+    this.angle = rand(0,TAU);
+    this.size = rand(2.6,3.8);
+
+    // --- drives (the "mind") ---
+    const base = PERSONAS[persona] || PERSONAS.normal;
+    const spread = (v)=> v + (Math.random()-0.5)*2*CFG.variance*0.6;
+    this.dives = {
+      hunger:   spread(base.hunger),
+      curiosity:spread(base.curiosity),
+      fear:     spread(base.fear),
+      social:   spread(base.social)
+    };
+    this.speedMul = base.speed;
+    this.persona = persona;
+
+    // --- internal state ---
+    this.energy = rand(60,100);
+    this.alert  = 0;          // fear spikes
+    this.mood   = 0.5;        // learned global valence (0 bad → 1 good)
+    this.age    = 0;
+    this.score  = 0;          // utility value this tick
+    this.action = 'wander';
+
+    // --- learning: action values per situational key ---
+    this.memory = {};         // key -> {v, n}
+    this.generation = inherit ? inherit.generation+1 : 0;
+
+    // --- visual ---
+    this.hue = CFG.showColor ? personaHue(persona) : 210;
+    this.legPhase = rand(0,TAU);
+    this.trail = [];
+  }
+
+  /* ---- utility scoring: the heart of "intelligence" ---- */
+  evaluate(){
+    const out = [];
+    const D = this.dives;
+
+    // ----- seek food -----
+    if(foods.length){
+      let best=null, bd=1e9;
+      for(const f of foods){ const d=dist(this,f); if(d<bd){bd=d;best=f;} }
+      const hungerDrive = (1 - this.energy/100) * D.hunger * 2.2;
+      const near = clamp(1 - bd/420, 0, 1);
+      out.push({a:'seekFood', s: hungerDrive*(0.4+near*0.9) + hungerDrive*0.3, target:best});
+    }
+    // ----- flee danger -----
+    if(dangers.length){
+      let best=null, bd=1e9;
+      for(const dg of dangers){ const d=dist(this,dg); if(d<bd){bd=d;best=dg;} }
+      const flee = clamp(1 - bd/260, 0, 1) * D.fear * 3.0 * CFG.fear;
+      out.push({a:'flee', s: flee, target:best});
+    }
+    // ----- explore -----
+    out.push({a:'explore', s: D.curiosity * 1.15 * (0.5 + (1-this.energy/140)*0.5)});
+    // ----- socialize -----
+    if(ants.length>1){
+      let near=0;
+      for(const o of ants){ if(o!==this && dist(this,o)<130) near++; }
+      out.push({a:'social', s: D.social * (0.5 + near*0.35)});
+    }
+    // ----- rest -----
+    out.push({a:'rest', s: (1-this.energy/100) * 0.35 + (this.alert>1?0.4:0)});
+
+    // ----- learned bias: memory nudges the score -----
+    for(const o of out){
+      const k = o.a;
+      const m = this.memory[k];
+      if(m && m.n>0){
+        const learned = m.v; // -1..1
+        o.s += learned * 0.85 * CFG.reward;
+      }
+    }
+    // ----- norm -----
+    out.sort((p,q)=>q.s-p.s);
+    this.score  = out[0].s;
+    this.action = out[0].a;
+    this.targetObj = out[0].target || null;
+    this.allOptions = out.slice(0,3);
+  }
+
+  /* ---- reinforcement update ---- */
+  reinforce(actionKey, value){
+    // value: +1 good, -1 bad
+    const m = this.memory[actionKey] || (this.memory[actionKey]={v:0,n:0});
+    const lr = CFG.lr * (value>0 ? CFG.reward : CFG.punish);
+    m.v = clamp(m.v + lr*(value - m.v), -1.5, 1.5);
+    m.n++;
+    this.mood = clamp(this.mood + lr*value*0.25, 0, 1);
+  }
+
+  update(dt){
+    this.age += dt;
+    this.energy -= dt*1.6;
+    this.alert  = Math.max(0, this.alert - dt*0.8);
+    this.legPhase += dt * 9 * (0.5 + Math.hypot(this.vx,this.vy)*0.2);
+
+    // decay memories (forgetting)
+    for(const k in this.memory){
+      const m=this.memory[k];
+      m.v *= (1 - CFG.decay*dt);
+      if(Math.abs(m.v)<0.01 && m.n>0){ m.n=Math.max(0,m.n-1); }
+    }
+
+    if(paused) return;
+    this.evaluate();
+
+    let tx=0,ty=0, spd = 34 * this.speedMul;
+    const t = this.targetObj;
+
+    switch(this.action){
+      case 'seekFood':
+        if(t){ tx=t.x; ty=t.y; spd*=1.25; } break;
+      case 'flee':
+        if(t){ const a=Math.atan2(this.y-t.y,this.x-t.x); tx=this.x+Math.cos(a)*90; ty=this.y+Math.sin(a)*90; spd*=1.6; }
+        break;
+      case 'social':{
+        let best=null,bd=1e9;
+        for(const o of ants){ if(o!==this){const d=dist(this,o); if(d<bd){bd=d;best=o;}}}
+        if(best){ tx=best.x; ty=best.y; spd*=0.9; }
+        break;
+      }
+      case 'explore':
+        this._wand = this._wand || rand(0,TAU);
+        this._wand += rand(-0.05,0.05)*dt*60;
+        tx = this.x + Math.cos(this._wand)*120;
+        ty = this.y + Math.sin(this._wand)*120;
+        spd*=1.05; break;
+      case 'rest':
+        spd*=0.15;
+        this.energy = Math.min(100, this.energy + dt*3.5);
+        break;
+    }
+
+    const ang = Math.atan2(ty-this.y || Math.sin(this.angle), tx-this.x || Math.cos(this.angle));
+    this.vx += (Math.cos(ang)*spd - this.vx)*0.14;
+    this.vy += (Math.sin(ang)*spd - this.vy)*0.14;
+
+    // separation (avoid stacking)
+    for(const o of ants){
+      if(o===this) continue;
+      const d = dist(this,o);
+      if(d<14 && d>0.1){
+        this.vx += (this.x-o.x)/d*22*dt*60*0.02;
+        this.vy += (this.y-o.y)/d*22*dt*60*0.02;
+      }
+    }
+
+    this.x += this.vx*dt*60;
+    this.y += this.vy*dt*60;
+
+    // wall collision
+    for(const w of walls){
+      if(this.x>w.x && this.x<w.x+w.w && this.y>w.y && this.y<w.y+w.h){
+        const cx=w.x+w.w/2, cy=w.y+w.h/2;
+        if(Math.abs(this.x-cx)/w.w > Math.abs(this.y-cy)/w.h){
+          this.x = this.x<cx ? w.x-3 : w.x+w.w+3; this.vx*=-0.5;
+        } else {
+          this.y = this.y<cy ? w.y-3 : w.y+w.h+3; this.vy*=-0.5;
+        }
+      }
+    }
+    // bounds
+    if(this.x<5){this.x=5;this.vx*=-1;} if(this.x>W-5){this.x=W-5;this.vx*=-1;}
+    if(this.y<52){this.y=52;this.vy*=-1;} if(this.y>H-90){this.y=H-90;this.vy*=-1;}
+
+    this.angle = Math.atan2(this.vy,this.vx);
+
+    // ---- interactions ----
+    for(let i=foods.length-1;i>=0;i--){
+      const f=foods[i];
+      if(dist(this,f)<11){
+        this.energy = Math.min(100, this.energy+34);
+        this.reinforce('seekFood', 1);
+        this.reinforce('explore', 0.35);
+        foods.splice(i,1);
+        if(selected===this) log(`Ant A${this.id} ate — seekFood reinforced`,'hi');
+        burst(f.x,f.y,'#ffd27f',10);
+      }
+    }
+    for(const dg of dangers){
+      if(dist(this,dg) < dg.r){
+        this.alert = 3.2;
+        this.energy -= dt*10;
+        this.reinforce('seekFood', -1);
+        this.reinforce('explore', -0.8);
+        this.reinforce('flee', 1);
+        this.vx = -this.vx*1.5; this.vy = -this.vy*1.5;
+      }
+    }
+    // starving
+    if(this.energy<=0){
+      this.energy=0; this.hp=(this.hp??1)-dt*0.12;
+      if(this.hp<=0){ this.dead=true; log(`Ant A${this.id} starved`,'bad'); }
+    }
+  }
+
+  poke(dx,dy,strength=1){
+    this.vx += dx*strength*4; this.vy += dy*strength*4;
+    this.alert = Math.max(this.alert, 1.6*strength);
+    this.reinforce(this.action, -0.55*strength);
+    this.mood = clamp(this.mood - 0.12*strength, 0, 1);
+    burst(this.x,this.y,'#ff8a8a',8);
+  }
+  reward(){
+    this.reinforce(this.action, 1);
+    this.reinforce('seekFood', 0.4);
+    this.energy = Math.min(100,this.energy+8);
+    this.mood = clamp(this.mood+0.2,0,1);
+    burst(this.x,this.y,'#8fffbf',14);
+  }
+  punish(){
+    this.reinforce(this.action, -1);
+    this.alert = 2.4;
+    this.mood = clamp(this.mood-0.25,0,1);
+    burst(this.x,this.y,'#ff9a6b',12);
+  }
+}
+
+function personaHue(p){
+  return {bold:8, timid:210, greedy:42, curious:160, normal:265}[p] || 265;
+}
+</script>
+
+<script>
+/* ============ PARTICLES ============ */
+const parts=[];
+function burst(x,y,color,n=8,sp=3){
+  for(let i=0;i<n;i++){
+    const a=rand(0,TAU);
+    parts.push({x,y,vx:Math.cos(a)*rand(1,sp),vy:Math.sin(a)*rand(1,sp),life:1,color,size:rand(1.5,3.5)});
+  }
+}
+
+/* ============ SPAWN / WORLD ============ */
+let antId = 0;
+function makeAnt(x,y,persona,inherit){
+  const a = new Ant(x,y,persona,inherit);
+  a.id = antId++;
+  ants.push(a);
+  return a;
+}
+function populate(n){
+  while(ants.length<n) makeAnt(rand(60,W-60), rand(90,H-140), PERSONA_KEYS[Math.floor(rand(0,4))]);
+  while(ants.length>n) ants.pop();
+}
+function resetWorld(keepCfg=true){
+  ants.length=0; foods.length=0; dangers.length=0; walls.length=0;
+  antId=0; gen=0; history=[]; logLines=[];
+  populate(CFG.count);
+  selected=null; renderLog(); renderInspector();
+  log('World reset','hi');
+}
+
+/* ============ TOOL ============ */
+let tool='poke';
+
+/* ============ INPUT ============ */
+let downT=0, downPos=null, dragging=false, pinch=null;
+let camX=0, camY=0, zoom=1;   // simple pan/zoom
+let pointers = new Map();
+
+cv.addEventListener('pointerdown', e=>{
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  downT=Date.now(); downPos={x:e.clientX,y:e.clientY}; dragging=false;
+  if(pointers.size===2){
+    const [a,b]=[...pointers.values()];
+    pinch={d:Math.hypot(a.x-b.x,a.y-b.y), z:zoom};
+  }
+});
+cv.addEventListener('pointermove', e=>{
+  if(!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1 && downPos){
+    if(Math.hypot(e.clientX-downPos.x, e.clientY-downPos.y)>8) dragging=true;
+    if(dragging && tool==='wall' && !wallDraft){
+      wallDraft={x:downPos.x,y:downPos.y,w:1,h:1};
+    }
+    if(wallDraft){
+      wallDraft.w = e.clientX-wallDraft.x;
+      wallDraft.h = e.clientY-wallDraft.y;
+    }
+  }
+  if(pointers.size===2 && pinch){
+    const [a,b]=[...pointers.values()];
+    const d=Math.hypot(a.x-b.x,a.y-b.y);
+    zoom = clamp(pinch.z * (d/pinch.d), 0.6, 2.2);
+  }
+});
+cv.addEventListener('pointerup', e=>{
+  const p={x:e.clientX,y:e.clientY};
+  pointers.delete(e.pointerId);
+  if(pointers.size<2) pinch=null;
+
+  if(dragging && wallDraft){
+    const w=wallDraft; wallDraft=null;
+    walls.push({x:Math.min(w.x,w.x+w.w), y:Math.min(w.y,w.y+w.h),
+                w:Math.abs(w.w), h:Math.abs(w.h)});
+    return;
+  }
+  wallDraft=null;
+  if(pointers.size>0) return;
+  if(Date.now()-downT>420 || dragging) return;   // long-press / drag = no tap
+  handleTap(p.x,p.y);
+});
+cv.addEventListener('pointercancel', e=>{ pointers.delete(e.pointerId); wallDraft=null; });
+
+let wallDraft=null;
+
+function hitAnt(x,y){
+  let best=null,bd=26;
+  for(const a of ants){ const d=dist(a,{x,y}); if(d<bd){bd=d;best=a;} }
+  return best;
+}
+
+function handleTap(x,y){
+  if(tool==='food'){
+    foods.push({x,y,t:Date.now()});
+    burst(x,y,'#ffd27f',10);
+    log('Food placed','hi');
+    return;
+  }
+  if(tool==='danger'){
+    dangers.push({x,y,r:52,t:Date.now()});
+    burst(x,y,'#ff6b6b',14);
+    log('Threat zone placed','warn');
+    return;
+  }
+  if(tool==='spawn'){
+    const a=makeAnt(x,y,PERSONA_KEYS[Math.floor(rand(0,4))]);
+    log(`Spawned ant A${a.id}`,'hi');
+    return;
+  }
+  if(tool==='wall'){ return; } // drag only
+
+  const a=hitAnt(x,y);
+  if(!a){ selected=null; renderInspector(); return; }
+  selected=a;
+  if(tool==='poke')   { a.poke((a.x-x)*0.1,(a.y-y)*0.1,1); log(`Poked A${a.id}`,'warn'); }
+  if(tool==='pet')    { a.reward(); log(`Rewarded A${a.id} — reinforced ${a.action}`,'hi'); }
+  renderInspector();
+}
+
+/* ============ RENDER ============ */
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // vignette bg
+  const g=ctx.createRadialGradient(W/2,H/2,50,W/2,H/2,Math.max(W,H)*0.75);
+  g.addColorStop(0,'#0b1520'); g.addColorStop(1,'#04070a');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // grid
+  ctx.strokeStyle='rgba(110,216,255,.045)'; ctx.lineWidth=1;
+  const gs=52;
+  for(let x=0;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // ---- walls ----
+  for(const w of walls){
+    ctx.fillStyle='rgba(120,150,190,.20)';
+    ctx.strokeStyle='rgba(150,190,230,.45)'; ctx.lineWidth=1.5;
+    ctx.fillRect(w.x,w.y,w.w,w.h);
+    ctx.strokeRect(w.x,w.y,w.w,w.h);
+  }
+  if(wallDraft){
+    const w=wallDraft;
+    ctx.fillStyle='rgba(120,150,190,.18)';
+    ctx.strokeStyle='rgba(150,190,230,.5)'; ctx.setLineDash([5,4]);
+    ctx.fillRect(Math.min(w.x,w.x+w.w),Math.min(w.y,w.y+w.h),Math.abs(w.w),Math.abs(w.h));
+    ctx.strokeRect(Math.min(w.x,w.x+w.w),Math.min(w.y,w.y+w.h),Math.abs(w.w),Math.abs(w.h));
+    ctx.setLineDash([]);
+  }
+
+  // ---- dangers ----
+  for(const dg of dangers){
+    const pulse = 1+Math.sin(Date.now()*0.006)*0.07;
+    const gr=ctx.createRadialGradient(dg.x,dg.y,4,dg.x,dg.y,dg.r*pulse);
+    gr.addColorStop(0,'rgba(255,70,70,.28)');
+    gr.addColorStop(.6,'rgba(255,70,70,.10)');
+    gr.addColorStop(1,'rgba(255,70,70,0)');
+    ctx.fillStyle=gr;
+    ctx.beginPath();ctx.arc(dg.x,dg.y,dg.r*pulse,0,TAU);ctx.fill();
+    ctx.strokeStyle='rgba(255,110,110,.4)';ctx.lineWidth=1.5;
+    ctx.setLineDash([6,5]);
+    ctx.beginPath();ctx.arc(dg.x,dg.y,dg.r*pulse,0,TAU);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,150,150,.8)';
+    ctx.font='13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('⚠',dg.x,dg.y);
+  }
+
+  // ---- food ----
+  for(const f of foods){
+    const pulse=1+Math.sin(Date.now()*0.004+f.x)*0.12;
+    ctx.shadowColor='#ffc95e';ctx.shadowBlur=16;
+    ctx.fillStyle='#ffd27f';
+    ctx.beginPath();ctx.arc(f.x,f.y,4.6*pulse,0,TAU);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(255,210,127,.35)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(f.x,f.y,11*pulse,0,TAU);ctx.stroke();
+  }
+
+  // ---- ants ----
+  for(const a of ants){
+    // decision rays (debug)
+    if(CFG.showRays && a.allOptions){
+      ctx.lineWidth=1.5;
+      const cols=['rgba(110,216,255,.55)','rgba(110,216,255,.28)','rgba(110,216,255,.15)'];
+      a.allOptions.forEach((o,i)=>{
+        let tx=a.x,ty=a.y;
+        if(o.a==='seekFood'&&o.target){tx=o.target.x;ty=o.target.y;}
+        else if(o.a==='flee'&&o.target){const an=Math.atan2(a.y-o.target.y,a.x-o.target.x);tx=a.x+Math.cos(an)*120;ty=a.y+Math.sin(an)*120;}
+        ctx.strokeStyle=cols[i];
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(tx,ty);ctx.stroke();
+      });
+    }
+
+    const hue = CFG.showColor ? a.hue : 210;
+    const alertGlow = a.alert>0.5;
+
+    ctx.save();
+    ctx.translate(a.x,a.y);
+    ctx.rotate(a.angle);
+
+    // shadow
+    ctx.fillStyle='rgba(0,0,0,.35)';
+    ctx.beginPath();ctx.ellipse(0,0,a.size*2.1,a.size*1.15,0,0,TAU);ctx.fill();
+
+    // legs
+    ctx.strokeStyle=`hsla(${hue},70%,${alertGlow?72:55}%,.9)`;
+    ctx.lineWidth=1.5;ctx.lineCap='round';
+    for(let i=0;i<3;i++){
+      const off=(i-1)*a.size*1.05;
+      const sw=Math.sin(a.legPhase+i*1.7)*a.size*0.9;
+      for(const side of [-1,1]){
+        ctx.beginPath();
+        ctx.moveTo(off,side*a.size*0.4);
+        ctx.lineTo(off+sw*0.5, side*(a.size*1.5+Math.abs(sw)*0.3));
+        ctx.stroke();
+      }
+    }
+
+    // abdomen
+    ctx.shadowColor = alertGlow?'#ff6b6b':`hsla(${hue},85%,60%,.9)`;
+    ctx.shadowBlur = alertGlow?16:9;
+    const bodyGrad = ctx.createLinearGradient(-a.size*2,0,a.size*2,0);
+    bodyGrad.addColorStop(0,`hsl(${hue},60%,22%)`);
+    bodyGrad.addColorStop(0.5,`hsl(${hue},70%,38%)`);
+    bodyGrad.addColorStop(1,`hsl(${hue},75%,30%)`);
+    ctx.fillStyle=bodyGrad;
+    ctx.beginPath();ctx.ellipse(-a.size*1.35,0,a.size*1.05,a.size*0.85,0,0,TAU);ctx.fill(); // abdomen
+    ctx.beginPath();ctx.ellipse(a.size*0.15,0,a.size*0.72,a.size*0.62,0,0,TAU);ctx.fill(); // thorax
+    ctx.beginPath();ctx.arc(a.size*1.5,0,a.size*0.72,0,TAU);ctx.fill(); // head
+    ctx.shadowBlur=0;
+
+    // antennae
+    ctx.strokeStyle=`hsla(${hue},80%,${alertGlow?75:58}%,1)`;
+    ctx.lineWidth=1.1;
+    for(const s of [-1,1]){
+      const wig=Math.sin(Date.now()*0.005+a.legPhase)*0.3;
+      ctx.beginPath();
+      ctx.moveTo(a.size*1.7,0);
+      ctx.quadraticCurveTo(a.size*2.5,s*a.size*0.5,a.size*3.1,s*a.size*0.9+wig);
+      ctx.stroke();
+    }
+
+    // eyes
+    ctx.fillStyle = a.mood>0.6?'#8fffbf':(a.mood<0.3?'#ff9a9a':'#dff3ff');
+    ctx.beginPath();ctx.arc(a.size*1.75,-a.size*0.28,a.size*0.17,0,TAU);ctx.fill();
+    ctx.beginPath();ctx.arc(a.size*1.75,a.size*0.28,a.size*0.17,0,TAU);ctx.fill();
+
+    ctx.restore();
+
+    // selection ring
+    if(selected===a){
+      const p = 1+Math.sin(Date.now()*0.007)*0.12;
+      ctx.strokeStyle='rgba(110,216,255,.9)';ctx.lineWidth=1.8;
+      ctx.beginPath();ctx.arc(a.x,a.y,16*p,0,TAU);ctx.stroke();
+      ctx.strokeStyle='rgba(110,216,255,.45)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(a.x,a.y,22*p,0,TAU);ctx.stroke();
+      ctx.fillStyle='#6fd8ff';ctx.font='700 10px system-ui';
+      ctx.textAlign='center';ctx.fillText('A'+a.id, a.x, a.y-28);
+    }
+  }
+
+  // ---- particles ----
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];
+    p.x+=p.vx;p.y+=p.vy;p.vx*=0.94;p.vy*=0.94;p.life-=0.026;
+    if(p.life<=0){parts.splice(i,1);continue;}
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,TAU);ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+/* ============ MAIN LOOP ============ */
+let last=performance.now(), acc=0, histAcc=0;
+function loop(now){
+  const raw=(now-last)/1000; last=now;
+  const dt=Math.min(raw,0.05)*speed;
+
+  if(!paused){
+    for(const a of ants) a.update(dt);
+    ants = ants.filter(a=>!a.dead);
+    // remove wrapped dangers/food occasionally
+    const T=Date.now();
+    dangers = dangers.filter(d=>T-d.t < 14000);
+  }
+
+  // PERF FIX: cap the visual frame rate to ~30fps on small screens so the
+  // mobile GPU/compositor is not saturated (physics above stays time-based).
+  _rAcc = (_rAcc||0) + raw;
+  const _minFrame = (Math.min(innerWidth, innerHeight) < 820) ? 1/32 : 0;
+  if(_rAcc >= _minFrame){ _rAcc = 0; draw(); }
+
+  // history sampling
+  histAcc += raw;
+  if(histAcc>0.5 && ants.length){
+    histAcc=0;
+    const avgMood = ants.reduce((s,a)=>s+a.mood,0)/ants.length;
+    const avgEnergy = ants.reduce((s,a)=>s+a.energy,0)/ants.length;
+    const scoring = ants.reduce((s,a)=>{
+      const m=Object.values(a.memory); let v=0,n=0;
+      for(const x of m){v+=x.v;n++;} return s + (n?v/n:0);
+    },0)/ants.length;
+    history.push({mood:avgMood, energy:avgEnergy, learn:scoring});
+    if(history.length>120) history.shift();
+    gen++;
+    hGen.textContent=gen;
+    if(openSheet==='data'){ renderGraph(); renderAvg(); }
+  }
+
+  // live inspector refresh
+  inspAcc=(inspAcc||0)+raw;
+  if(inspAcc>0.35){ inspAcc=0; if(selected && openSheet==='mind') renderInspector(); }
+
+  requestAnimationFrame(loop);
+}
+
+/* ============ GRAPH ============ */
+function renderGraph(){
+  const gc=document.getElementById('graph');
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const w=gc.clientWidth, h=150;
+  // PERF FIX: only reallocate the GPU-backed bitmap when the size actually changed.
+  const tw=Math.round(w*dpr), th=Math.round(h*dpr);
+  if(gc.width!==tw || gc.height!==th){ gc.width=tw; gc.height=th; }
+  const g=gc.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+
+  if(history.length<2){ g.fillStyle='#3d5a75'; g.font='11px system-ui'; g.textAlign='center';
+    g.fillText('gathering data...',w/2,h/2); return; }
+
+  const draw=(key,color)=>{
+    g.strokeStyle=color;g.lineWidth=2;g.beginPath();
+    history.forEach((p,i)=>{
+      const x=(i/(history.length-1))*w;
+      let v=p[key];
+      if(key==='learn') v=(v+1.5)/3;  // -1.5..1.5 → 0..1
+      const y=h-(v*(h-16))-8;
+      i?g.lineTo(x,y):g.moveTo(x,y);
+    });
+    g.stroke();
+  };
+  // grid
+  g.strokeStyle='rgba(110,216,255,.1)';g.lineWidth=1;
+  for(let i=1;i<4;i++){g.beginPath();g.moveTo(0,h*i/4);g.lineTo(w,h*i/4);g.stroke();}
+  draw('energy','rgba(255,200,100,.85)');
+  draw('mood','rgba(110,216,255,.9)');
+  draw('learn','rgba(150,255,190,.9)');
+
+  g.fillStyle='rgba(255,200,100,.9)';g.font='9px system-ui';g.textAlign='left';g.fillText('energy',4,11);
+  g.fillStyle='rgba(110,216,255,.9)';g.fillText('mood',4,22);
+  g.fillStyle='rgba(150,255,190,.9)';g.fillText('learned value',4,33);
+}
+
+function renderAvg(){
+  const box=document.getElementById('avgBox');
+  if(!ants.length){box.innerHTML='<p class="hint-txt">no ants</p>';return;}
+  const n=ants.length;
+  const avg=k=>(ants.reduce((s,a)=>s+a[k],0)/n);
+  const drives=ants.reduce((s,a)=>({h:s.h+a.dives.hunger,c:s.c+a.dives.curiosity,f:s.f+a.dives.fear,so:s.so+a.dives.social}),{h:0,c:0,f:0,so:0});
+  const rows=[
+    ['Population', n, '#6fd8ff'],
+    ['Avg energy', avg('energy').toFixed(0)+'%', '#ffc95e'],
+    ['Avg mood', (avg('mood')*100).toFixed(0)+'%', '#8fffbf'],
+    ['Hunger drive', (drives.h/n).toFixed(2), '#ffa06b'],
+    ['Curiosity', (drives.c/n).toFixed(2), '#8fd6ff'],
+    ['Fear', (drives.f/n).toFixed(2), '#ff8a8a'],
+    ['Social', (drives.so/n).toFixed(2), '#c9a0ff'],
+  ];
+  box.innerHTML=rows.map(r=>`
+    <div class="bar-wrap">
+      <div class="bar-top"><span>${r[0]}</span><b style="color:${r[2]}">${r[1]}</b></div>
+      <div class="bar"><i style="width:${clamp(parseFloat(r[1])||0,0,100)}%;background:${r[2]}"></i></div>
+    </div>`).join('');
+}
+
+/* ============ INSPECTOR ============ */
+function renderInspector(){
+  const el=document.getElementById('inspector');
+  if(!selected){ el.innerHTML='<p class="hint-txt">Tap an ant in the arena to inspect its live mind.</p>'; return; }
+  const a=selected;
+  const bars=[
+    ['Energy', a.energy, '#ffc95e'],
+    ['Mood (learned)', a.mood*100, a.mood>0.6?'#8fffbf':(a.mood<0.3?'#ff9a9a':'#dff3ff')],
+    ['Alert', a.alert*30, '#ff8a8a'],
+    ['Hunger drive', a.dives.hunger*40, '#ffa06b'],
+    ['Curiosity', a.dives.curiosity*40, '#8fd6ff'],
+    ['Fear', a.dives.fear*40, '#ff8a8a'],
+    ['Social', a.dives.social*40, '#c9a0ff'],
+  ];
+  const mem = Object.entries(a.memory).filter(([k,v])=>v.n>0)
+    .sort((x,y)=>Math.abs(y[1].v)-Math.abs(x[1].v)).slice(0,6);
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="font-size:22px;font-weight:800;color:#6fd8ff;">A${a.id}</div>
+      <span class="persona">${a.persona}</span>
+      <span style="font-size:10px;color:#5d7d9c;margin-left:auto;">gen ${a.generation} · ${Math.floor(a.age)}s</span>
+    </div>
+    <div style="font-size:11px;color:#8fadca;margin-bottom:8px;">Current action: <b style="color:#6fd8ff">${a.action}</b> · score ${a.score.toFixed(2)}</div>
+    ${bars.map(b=>`
+      <div class="bar-wrap">
+        <div class="bar-top"><span>${b[0]}</span><b>${Math.max(0,Math.min(100,b[1])).toFixed(0)}%</b></div>
+        <div class="bar"><i style="width:${clamp(b[1],0,100)}%;background:${b[2]}"></i></div>
+      </div>`).join('')}
+    <h3 style="font-size:10px;letter-spacing:1.6px;color:#4f739a;margin:14px 0 8px;text-transform:uppercase;">Learned associations</h3>
+    ${mem.length?mem.map(m=>{
+      const v=m[1].v;
+      const pct=clamp((v+1.5)/3*100,0,100);
+      const col=v>0.1?'#8fffbf':(v<-0.1?'#ff9a9a':'#8fadca');
+      return `<div class="bar-wrap">
+        <div class="bar-top"><span>${m[0]}</span><b style="color:${col}">${v>0?'+':''}${v.toFixed(2)} ×${m[1].n}</b></div>
+        <div class="bar"><i style="width:${pct}%;background:${col}"></i></div></div>`;
+    }).join(''):'<p class="hint-txt">No learned associations yet. Reward or punish this ant.</p>'}
+  `;
+}
+
+/* ============ LOG ============ */
+function renderLog(){
+  const el=document.getElementById('log');
+  if(!el) return;
+  el.innerHTML = logLines.slice(0,40).map(l=>`<div class="${l.c}">${l.m}</div>`).join('');
+}
+</script>
+
+<script>
+/* ============ UI WIRING ============ */
+const $ = id=>document.getElementById(id);
+const hPop=$('hPop'), hGen=$('hGen');
+
+let openSheet = null;
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    const name=t.dataset.sheet;
+    const wasOpen = openSheet===name;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on', x===t && !wasOpen));
+    document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+    if(wasOpen){ openSheet=null; return; }
+    $('sheet-'+name).classList.add('open');
+    openSheet=name;
+    if(name==='data'){ renderGraph(); renderAvg(); }
+    if(name==='mind') renderInspector();
+  };
+});
+
+// tools
+document.querySelectorAll('.tool').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tool').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    tool=t.dataset.tool;
+    if(tool==='wall') toast('Drag to draw a wall');
+  };
+});
+
+// sliders
+function bindSlider(id, valId, key, fmt, live){
+  const s=$(id), v=$(valId);
+  const upd=()=>{
+    const raw=+s.value;
+    const val = fmt ? fmt(raw) : raw/100;
+    CFG[key]=val;
+    v.textContent = live ? live(raw) : val.toFixed(2);
+    if(key==='count'){ populate(val); hPop.textContent=ants.length; }
+  };
+  s.addEventListener('input',upd);
+  upd();
+}
+bindSlider('pHunger','vHunger','hunger', r=>r/100);
+bindSlider('pCurio','vCurio','curiosity', r=>r/100);
+bindSlider('pFear','vFear','fear', r=>r/100);
+bindSlider('pSocial','vSocial','social', r=>r/100);
+bindSlider('pLR','vLR','lr', r=>r/100);
+bindSlider('pDecay','vDecay','decay', r=>r/100);
+bindSlider('pPun','vPun','punish', r=>r/100);
+bindSlider('pRew','vRew','reward', r=>r/100);
+bindSlider('pCount','vCount','count', r=>r, null, r=>r);
+bindSlider('pVar','vVar','variance', r=>r/100);
+bindSlider('pMut','vMut','mutation', r=>r/100);
+
+// persona preset buttons → apply to selected
+document.querySelectorAll('[data-persona]').forEach(b=>{
+  b.onclick=()=>{
+    if(!selected){ toast('Select an ant first'); return; }
+    const p=b.dataset.persona, base=PERSONAS[p];
+    selected.dives={...selected.dives,...{
+      hunger:base.hunger, curiosity:base.curiosity, fear:base.fear, social:base.social
+    }};
+    selected.persona=p; selected.hue=CFG.showColor?personaHue(p):210;
+    log(`A${selected.id} → ${p} personality`,'hi');
+    renderInspector();
+  };
+});
+
+// play / speed
+$('bPlay').onclick=()=>{ paused=!paused; $('bPlay').textContent=paused?'▶':'⏸'; };
+const speeds=[1,2,4,8];
+let spIdx=0;
+$('bSpeed').onclick=()=>{ spIdx=(spIdx+1)%speeds.length; speed=speeds[spIdx]; $('bSpeed').textContent=speed+'×'; };
+
+// system buttons
+$('bReset').onclick=()=>{ resetWorld(); hPop.textContent=ants.length; };
+$('bClear').onclick=()=>{ foods.length=0; dangers.length=0; walls.length=0; log('Cleared items'); };
+$('bSave').onclick=()=>{
+  const data={ants:ants.map(a=>({x:a.x,y:a.y,persona:a.persona,d:a.dives,memory:a.memory,mood:a.mood,energy:a.energy,gen:a.generation})),
+              foods,dangers,walls,CFG,gen};
+  localStorage.setItem('antlab_world', JSON.stringify(data));
+  toast('World saved');
+};
+$('bLoad').onclick=()=>{
+  const raw=localStorage.getItem('antlab_world');
+  if(!raw){ toast('No saved world'); return; }
+  const d=JSON.parse(raw);
+  ants.length=0; antId=0;
+  d.ants.forEach(s=>{ const a=makeAnt(s.x,s.y,s.persona); a.dives=s.d; a.memory=s.memory||{}; a.mood=s.mood||0.5; a.energy=s.energy||80; a.generation=s.gen||0; });
+  foods.splice(0,foods.length,...(d.foods||[]));
+  dangers.splice(0,dangers.length,...(d.dangers||[]));
+  walls.splice(0,walls.length,...(d.walls||[]));
+  hPop.textContent=ants.length;
+  toast('World loaded'); log('World loaded','hi');
+};
+$('bNuke').onclick=()=>{
+  ants.forEach(a=>{a.memory={}; a.mood=0.5;});
+  history=[]; log('All memories wiped','bad'); toast('Memories reset');
+};
+
+// switches
+function bindSwitch(id,key){
+  const el=$(id);
+  el.onclick=()=>{ el.classList.toggle('on'); CFG[key]=el.classList.contains('on'); };
+}
+bindSwitch('swRays','showRays');
+bindSwitch('swColor','showColor');
+bindSwitch('swLinks','showLinks');
+
+/* ============ TOAST ============ */
+let toastT;
+function toast(msg){
+  const el=$('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),1800);
+}
+
+/* ============ BOOT ============ */
+resetWorld();
+hPop.textContent=ants.length;
+log('AntLab online — 10 ants spawned','hi');
+window.addEventListener('resize',()=>{ resize(); if(openSheet==='data') renderGraph(); });
+requestAnimationFrame(loop);
+
+// keep population counter fresh
+setInterval(()=>{ hPop.textContent=ants.length; },600);
+</script>
+</body>
+</html>
